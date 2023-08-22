@@ -2,9 +2,10 @@
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'dart:io' show Platform;
-
-import 'coin_data.dart';
+import '../utils/coin_data.dart';
+import '../services/cryptos.dart';
 
 class PriceScreen extends StatefulWidget {
   @override
@@ -12,7 +13,11 @@ class PriceScreen extends StatefulWidget {
 }
 
 class _PriceScreenState extends State<PriceScreen> {
-  String? currencySelected = "USD";
+  double? btcRate;
+  double? ethRate;
+  double? ltcRate;
+  String currencySelected = "USD";
+  String? cryptoCoin;
 
   DropdownButton androidDropdown() {
     List<DropdownMenuItem> dropdownMenuItems = [];
@@ -22,8 +27,8 @@ class _PriceScreenState extends State<PriceScreen> {
       /*String currency = currenciesList[i];*/
       dropdownMenuItems.add(
         DropdownMenuItem(
-          child: Text(currency),
           value: currency,
+          child: Text(currency),
         ),
       );
     }
@@ -34,6 +39,11 @@ class _PriceScreenState extends State<PriceScreen> {
       onChanged: (value) {
         setState(() {
           currencySelected = value!;
+          for (String crypto in cryptoList) {
+            cryptoCoin = crypto;
+            print("crypto $cryptoCoin");
+            fetchCoinData(cryptoCoin!, currencySelected);
+          }
         });
       },
     );
@@ -55,17 +65,63 @@ class _PriceScreenState extends State<PriceScreen> {
         setState(() {
           currencySelected = currenciesList[selectedIndex];
           print(currencySelected);
+          for (String crypto in cryptoList) {
+            cryptoCoin = crypto;
+            print("crypto $cryptoCoin");
+            fetchCoinData(cryptoCoin!, currencySelected);
+          }
         });
       },
       children: pickerItems,
     );
   }
 
+  void fetchCoinData(String coin, String currency) async {
+    try {
+      var coinData = await CryptoModel().getCryptoData(coin, currency);
+      setState(() {
+        if (coin == "BTC") {
+          double btcRatee = coinData['rate'];
+          btcRate = btcRatee.floorToDouble();
+        } else if (coin == "ETH") {
+          double ethRatee = coinData['rate'];
+          ethRate = ethRatee.floorToDouble();
+        } else if (coin == "LTC") {
+          double ltcRatee = coinData['rate'];
+          ltcRate = ltcRatee.floorToDouble();
+        }
+      });
+    } catch (e) {
+      print("Error fetching coin data: $e");
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    Card buildCryptoCard(String crypto, double? rate) {
+      return Card(
+        color: Colors.deepOrangeAccent,
+        elevation: 5.0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10.0),
+        ),
+        child: Padding(
+          padding: EdgeInsets.symmetric(vertical: 15.0, horizontal: 28.0),
+          child: Text(
+            '1 $crypto = ${rate ?? "?"} $currencySelected',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 20.0,
+              color: Colors.white,
+            ),
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Crypto Tracker'),
+        title: Text('Crypto Tracker'),
       ),
       body: Column(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -73,66 +129,15 @@ class _PriceScreenState extends State<PriceScreen> {
         children: <Widget>[
           Padding(
             padding: const EdgeInsets.fromLTRB(18.0, 18.0, 18.0, 0),
-            child: Card(
-              color: Colors.deepOrangeAccent,
-              elevation: 5.0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10.0),
-              ),
-              child: const Padding(
-                padding: EdgeInsets.symmetric(vertical: 15.0, horizontal: 28.0),
-                child: Text(
-                  '1 BTC = ? USD',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 20.0,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ),
+            child: buildCryptoCard(cryptoCoin = "BTC", btcRate),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(18.0, 18.0, 18.0, 0),
-            child: Card(
-              color: Colors.deepOrangeAccent,
-              elevation: 5.0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10.0),
-              ),
-              child: const Padding(
-                padding: EdgeInsets.symmetric(vertical: 15.0, horizontal: 28.0),
-                child: Text(
-                  '1 ETH = ? USD',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 20.0,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ),
+            child: buildCryptoCard(cryptoCoin = "ETH", ethRate),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(18.0, 18.0, 18.0, 0),
-            child: Card(
-              color: Colors.deepOrangeAccent,
-              elevation: 5.0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10.0),
-              ),
-              child: const Padding(
-                padding: EdgeInsets.symmetric(vertical: 15.0, horizontal: 28.0),
-                child: Text(
-                  '1 LTC = ? USD',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 20.0,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ),
+            child: buildCryptoCard(cryptoCoin = "LTC", ltcRate),
           ),
           Container(
             height: 150.0,
